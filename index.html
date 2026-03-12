@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Barrel Shift</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #000;
+    }
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    canvas {
+      display: block;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+    }
+
+    /* Scale toggle button — retro pixel art style */
+    #scaleToggle {
+      position: fixed;
+      top: 12px;
+      right: 12px;
+      z-index: 100;
+      background: #1a1a2e;
+      color: #00d0ff;
+      border: 2px solid #00d0ff;
+      padding: 6px 14px;
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 14px;
+      font-weight: bold;
+      letter-spacing: 1px;
+      cursor: pointer;
+      image-rendering: pixelated;
+      text-transform: uppercase;
+      user-select: none;
+      outline: none;
+      transition: background 0.1s;
+    }
+    #scaleToggle:hover {
+      background: #0a3060;
+    }
+    #scaleToggle:active {
+      background: #00d0ff;
+      color: #1a1a2e;
+    }
+  </style>
+</head>
+<body>
+
+<canvas id="gameCanvas"></canvas>
+<button id="scaleToggle" tabindex="-1">2x</button>
+
+<!-- Load order matters: config first, then engine, then renderer -->
+<script src="js/config.js"></script>
+<script src="js/engine.js"></script>
+<script src="js/renderer.js"></script>
+
+<script>
+(function () {
+  'use strict';
+
+  // --- Bootstrap ---
+  DK.input.init();
+  DK.engine.init();
+  DK.renderer.init('gameCanvas');
+  DK.scale.init(DK.renderer.canvas);
+  DK.audio.init();
+
+  // --- Fixed-timestep game loop ---
+  var FIXED_DT    = DK.CONFIG.FIXED_DT;  // 1/60 s
+  var accumulator = 0;
+  var lastTime    = 0;
+
+  function gameLoop(timestamp) {
+    if (!lastTime) { lastTime = timestamp; }
+
+    var elapsed = (timestamp - lastTime) / 1000; // ms → seconds
+    lastTime = timestamp;
+
+    // Clamp to avoid spiral-of-death on tab-switch / lag spikes
+    if (elapsed > 0.25) { elapsed = 0.25; }
+
+    accumulator += elapsed;
+
+    // Fixed-step updates (physics & logic)
+    while (accumulator >= FIXED_DT) {
+      DK.engine.update(FIXED_DT);
+      accumulator -= FIXED_DT;
+    }
+
+    // Render at display refresh rate
+    DK.renderer.render(DK.engine.state);
+
+    requestAnimationFrame(gameLoop);
+  }
+
+  // Kick off
+  requestAnimationFrame(gameLoop);
+})();
+</script>
+
+</body>
+</html>
